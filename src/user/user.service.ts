@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto/create-user.dto';
 import { SignInDto } from './dto/signin.dto/signin.dto';
@@ -12,26 +16,26 @@ export class UserService {
 
   async criarUsuario(createUserDto: CreateUserDto): Promise<User> {
     const { name, email, password, avatar } = createUserDto;
-  
-    const usuarioExistente = await this.prisma.user.findUnique({ where: { email } });
+
+    const usuarioExistente = await this.prisma.user.findUnique({
+      where: { email },
+    });
     if (usuarioExistente) {
       throw new ConflictException('E-mail já está em uso');
     }
-  
+
     const senhaHash = await hash(password, 10);
     const usuario = await this.prisma.user.create({
       data: {
-        name: 'João',
-        email: 'joao@example.com',
-        password: '$2b$10$IBgm8hwOMzJx9KmWvqE83evRrKn4P/BE0ttTA4/WLHu81taTUGxdu',
-        avatar: 'caminho/para/o/avatar.jpg', // Forneça o caminho do avatar válido aqui
+        name,
+        email,
+        password: senhaHash,
+        avatar,
       },
     });
-    
-  
+
     return usuario;
   }
-  
 
   async autenticarUsuario(signInDto: SignInDto): Promise<string> {
     const { email, password } = signInDto;
@@ -46,13 +50,33 @@ export class UserService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const token = this.jwtService.sign({ userId: usuario.id });
-
-    return token;
+    const token = this.createToken(usuario);
+    return token.token;
   }
 
   async obterTodosUsuarios(): Promise<User[]> {
     const usuarios = await this.prisma.user.findMany();
     return usuarios;
+  }
+  async findUserById(id: number) {
+    const usuario = await this.prisma.user.findUnique({ where: { id } });
+    if (!usuario) {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
+    return usuario;
+  }
+  createToken(user: User) {
+    const token = this.jwtService.sign(
+      {
+        name: user.name,
+        email: user.email,
+      },
+      {
+        expiresIn: '7 days',
+        subject: String(user.id),
+      },
+    );
+
+    return { token };
   }
 }

@@ -10,7 +10,7 @@ export class PublicationService {
   async criarPublicacao(userId: number, createPublicationDto: CreatePublicationDto): Promise<Publication> {
     const { image, title, text, dateToPublish, published, socialMedia } = createPublicationDto;
 
-    const publicacaoExistente = await this.prisma.publication.findUnique({ where: { id: 1 } });
+    const publicacaoExistente = await this.prisma.publication.findFirst({ where: { title } });
     if (publicacaoExistente) {
       throw new NotFoundException('Já existe uma publicação com o mesmo título');
     }
